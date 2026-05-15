@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-// ── Data ────────────────────────────────────────────────────────────────────
-
 const HOW_IT_WORKS = [
   { step: "01", icon: "✉️", title: "Submit Your Pens", desc: "Fill out our quick form describing the pens you want to sell — brand, condition, quantity. Takes under 2 minutes." },
   { step: "02", icon: "💰", title: "Get an Instant Quote", desc: "We evaluate your submission and send a fair, transparent cash offer within 24 hours. No haggling, no hidden fees." },
