@@ -296,4 +296,4 @@ export default function App() {
       </section>
 
       {/* ── PEN TYPES ── */}
-      <section id="types" style={{ padding: "110px 48px
+      <section id="types" style={{ padding: "110px 48px 
