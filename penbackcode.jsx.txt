@@ -1,0 +1,541 @@
+import { useState, useEffect, useRef } from "react";
+
+// ── Data ────────────────────────────────────────────────────────────────────
+
+const HOW_IT_WORKS = [
+  { step: "01", icon: "✉️", title: "Submit Your Pens", desc: "Fill out our quick form describing the pens you want to sell — brand, condition, quantity. Takes under 2 minutes." },
+  { step: "02", icon: "💰", title: "Get an Instant Quote", desc: "We evaluate your submission and send a fair, transparent cash offer within 24 hours. No haggling, no hidden fees." },
+  { step: "03", icon: "📦", title: "Ship for Free", desc: "Accept the offer and we'll email you a prepaid shipping label. Pack your pens and drop them off — zero cost to you." },
+  { step: "04", icon: "🏦", title: "Get Paid Fast", desc: "Once we receive and verify your pens, payment is released within 48 hours via bank transfer or PayPal." },
+];
+
+const PEN_TYPES = [
+  { label: "Ballpoint Pens", desc: "Dried out, cracked, or completely used", icon: "🖊️", color: "#C8956C" },
+  { label: "Gel Pens", desc: "Empty cartridges, broken tips, dried ink", icon: "✒️", color: "#7B9E87" },
+  { label: "Fountain Pens", desc: "Damaged nibs, cracked barrels, old models", icon: "🪶", color: "#8E7DBE" },
+  { label: "Marker Pens", desc: "Dried markers, felt tips, highlighters", icon: "🖍️", color: "#D4956A" },
+  { label: "Rollerball Pens", desc: "Depleted refills, broken mechanisms", icon: "📝", color: "#6A9DB5" },
+  { label: "Luxury / Collectible", desc: "Old Mont Blanc, Parker, Waterman & more", icon: "💎", color: "#B07B9E" },
+];
+
+const TESTIMONIALS = [
+  { name: "Priya S.", location: "Mumbai", text: "I had a whole drawer of dead pens collecting dust. PenBack gave me ₹800 for the lot! Super easy process.", stars: 5, pens: "34 pens sold" },
+  { name: "Rahul M.", location: "Delhi", text: "Didn't think anyone would want my old broken fountain pen. They paid surprisingly well and the free shipping made it a no-brainer.", stars: 5, pens: "1 luxury pen" },
+  { name: "Ananya K.", location: "Bangalore", text: "My office was throwing out hundreds of old pens. PenBack collected them all and even donated to our cause. Brilliant service.", stars: 5, pens: "200+ bulk pens" },
+];
+
+const FAQS = [
+  { q: "What condition do the pens need to be in?", a: "Any condition! We buy fully used, dried out, broken, or cosmetically damaged pens. Even if the pen writes nothing at all, we still want it." },
+  { q: "What brands do you accept?", a: "We accept all brands — from everyday Reynolds and Cello pens to luxury brands like Mont Blanc, Parker, Cross, and Waterman. All welcome." },
+  { q: "Is there a minimum quantity?", a: "No minimum! Send us a single pen or a box of 500. We handle both individuals and bulk business collections." },
+  { q: "How do you determine the price?", a: "Price is based on brand, material type (plastic, metal, resin), and quantity. Luxury brands and metal-barrel pens fetch higher prices." },
+  { q: "What happens to the pens after purchase?", a: "We responsibly recycle the materials, refurbish what can be saved, and partner with eco-programs to repurpose pen components. Nothing goes to landfill." },
+];
+
+const STATS = [
+  { value: "2.4M+", label: "Pens Purchased" },
+  { value: "18K+", label: "Happy Sellers" },
+  { value: "48hr", label: "Average Payout" },
+  { value: "100%", label: "Free Shipping" },
+];
+
+// ── Hooks ────────────────────────────────────────────────────────────────────
+
+function useInView(threshold = 0.1) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true); }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return [ref, inView];
+}
+
+function useScrollY() {
+  const [y, setY] = useState(0);
+  useEffect(() => {
+    const fn = () => setY(window.scrollY);
+    window.addEventListener("scroll", fn, { passive: true });
+    return () => window.removeEventListener("scroll", fn);
+  }, []);
+  return y;
+}
+
+// ── Components ───────────────────────────────────────────────────────────────
+
+function Reveal({ children, delay = 0, style = {}, className = "" }) {
+  const [ref, inView] = useInView();
+  return (
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? "translateY(0px)" : "translateY(28px)",
+      transition: `opacity 0.65s ease ${delay}s, transform 0.65s ease ${delay}s`,
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function StarRating({ count }) {
+  return <span>{"★".repeat(count).split("").map((_, i) => <span key={i} style={{ color: "#E8A838", fontSize: 14 }}>★</span>)}</span>;
+}
+
+// ── Main App ─────────────────────────────────────────────────────────────────
+
+export default function App() {
+  const [openFaq, setOpenFaq] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: "", email: "", quantity: "", brand: "", message: "" });
+  const [submitted, setSubmitted] = useState(false);
+  const scrollY = useScrollY();
+  const navScrolled = scrollY > 50;
+
+  const handleSubmit = () => {
+    if (formData.name && formData.email) setSubmitted(true);
+  };
+
+  const scroll = (id) => {
+    setMenuOpen(false);
+    setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
+
+  return (
+    <div style={{ fontFamily: "'Georgia', serif", background: "#FDFAF6", color: "#1C1A17", overflowX: "hidden" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Karla:wght@300;400;500;600&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #FDFAF6; }
+        ::-webkit-scrollbar-thumb { background: #C8956C; border-radius: 3px; }
+        ::selection { background: #C8956C; color: #fff; }
+        .display { font-family: 'Cormorant Garamond', Georgia, serif; }
+        .body { font-family: 'Karla', sans-serif; }
+        .nav-link { font-family: 'Karla', sans-serif; font-size: 13px; letter-spacing: 0.06em; color: #5A5550; text-decoration: none; cursor: pointer; transition: color 0.2s; }
+        .nav-link:hover { color: #C8956C; }
+        .btn-main { background: #1C1A17; color: #FDFAF6; border: none; cursor: pointer; font-family: 'Karla', sans-serif; font-size: 13px; letter-spacing: 0.08em; padding: 15px 36px; border-radius: 3px; transition: all 0.25s; text-transform: uppercase; }
+        .btn-main:hover { background: #C8956C; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,149,108,0.3); }
+        .btn-outline { background: transparent; color: #1C1A17; border: 1.5px solid #1C1A17; cursor: pointer; font-family: 'Karla', sans-serif; font-size: 13px; letter-spacing: 0.08em; padding: 14px 34px; border-radius: 3px; transition: all 0.25s; text-transform: uppercase; }
+        .btn-outline:hover { background: #1C1A17; color: #FDFAF6; }
+        .btn-amber { background: #C8956C; color: #fff; border: none; cursor: pointer; font-family: 'Karla', sans-serif; font-size: 13px; letter-spacing: 0.08em; padding: 15px 36px; border-radius: 3px; transition: all 0.25s; text-transform: uppercase; }
+        .btn-amber:hover { background: #B07A55; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(200,149,108,0.35); }
+        .card-hover { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 50px rgba(28,26,23,0.1); }
+        .faq-item { border-bottom: 1px solid rgba(28,26,23,0.1); }
+        input, textarea, select { width: 100%; padding: 12px 16px; border: 1.5px solid rgba(28,26,23,0.15); border-radius: 4px; font-family: 'Karla', sans-serif; font-size: 14px; background: #fff; color: #1C1A17; outline: none; transition: border 0.2s; }
+        input:focus, textarea:focus, select:focus { border-color: #C8956C; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes penFloat { 0%,100%{transform:rotate(-15deg) translateY(0)} 50%{transform:rotate(-15deg) translateY(-10px)} }
+        @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        .marquee-track { animation: marquee 22s linear infinite; display: inline-flex; white-space: nowrap; }
+        @media (max-width: 768px) {
+          .desktop-only { display: none !important; }
+          .hero-grid { grid-template-columns: 1fr !important; }
+          .how-grid { grid-template-columns: 1fr 1fr !important; }
+          .types-grid { grid-template-columns: 1fr 1fr !important; }
+          .stats-row { grid-template-columns: repeat(2,1fr) !important; }
+          .about-grid { grid-template-columns: 1fr !important; }
+          .footer-grid { grid-template-columns: 1fr 1fr !important; gap: 40px !important; }
+        }
+        @media (max-width: 480px) {
+          .how-grid { grid-template-columns: 1fr !important; }
+          .types-grid { grid-template-columns: 1fr !important; }
+          .footer-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (min-width: 769px) { .mobile-only { display: none !important; } }
+      `}</style>
+
+      {/* ── NAVBAR ── */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        padding: "18px 48px",
+        background: navScrolled ? "rgba(253,250,246,0.97)" : "transparent",
+        backdropFilter: navScrolled ? "blur(12px)" : "none",
+        borderBottom: navScrolled ? "1px solid rgba(28,26,23,0.08)" : "none",
+        transition: "all 0.35s ease",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 22 }}>🖊️</span>
+          <span className="display" style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.01em" }}>PenBack</span>
+        </div>
+
+        <div className="desktop-only" style={{ display: "flex", gap: 40 }}>
+          {[["How It Works", "how"], ["Pen Types", "types"], ["Testimonials", "testimonials"], ["FAQ", "faq"]].map(([label, id]) => (
+            <span key={id} className="nav-link" onClick={() => scroll(id)}>{label}</span>
+          ))}
+        </div>
+
+        <button className="btn-main desktop-only" style={{ padding: "11px 24px", fontSize: 12 }} onClick={() => scroll("contact")}>
+          Sell My Pens
+        </button>
+
+        <button className="mobile-only" onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 22, color: "#1C1A17" }}>
+          {menuOpen ? "✕" : "☰"}
+        </button>
+      </nav>
+
+      {menuOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 99, background: "#FDFAF6", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 28 }}>
+          {[["How It Works", "how"], ["Pen Types", "types"], ["Testimonials", "testimonials"], ["FAQ", "faq"], ["Sell My Pens", "contact"]].map(([label, id]) => (
+            <span key={id} className="display" style={{ fontSize: 28, cursor: "pointer", color: "#1C1A17" }} onClick={() => scroll(id)}>{label}</span>
+          ))}
+        </div>
+      )}
+
+      {/* ── HERO ── */}
+      <section style={{ minHeight: "100vh", display: "flex", alignItems: "center", padding: "130px 48px 80px", position: "relative", overflow: "hidden", background: "linear-gradient(160deg, #FDFAF6 55%, #F5EDE0 100%)" }}>
+        {/* Decorative ink blot circles */}
+        <div style={{ position: "absolute", top: "8%", right: "6%", width: 360, height: 360, borderRadius: "50%", background: "radial-gradient(circle, rgba(200,149,108,0.12), transparent 70%)", pointerEvents: "none" }} />
+        <div style={{ position: "absolute", bottom: "10%", left: "-4%", width: 280, height: 280, borderRadius: "50%", background: "radial-gradient(circle, rgba(200,149,108,0.08), transparent 70%)", pointerEvents: "none" }} />
+        {/* Ruled lines decoration */}
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(transparent, transparent 39px, rgba(200,149,108,0.08) 39px, rgba(200,149,108,0.08) 40px)", pointerEvents: "none" }} />
+
+        <div style={{ maxWidth: 1180, margin: "0 auto", width: "100%", position: "relative" }}>
+          <div className="hero-grid" style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 72, alignItems: "center" }}>
+            <div style={{ animation: "fadeUp 0.7s ease both" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(200,149,108,0.12)", border: "1px solid rgba(200,149,108,0.3)", borderRadius: 100, padding: "6px 18px", marginBottom: 28 }}>
+                <span style={{ width: 7, height: 7, background: "#C8956C", borderRadius: "50%" }} />
+                <span className="body" style={{ fontSize: 12, color: "#C8956C", letterSpacing: "0.1em", textTransform: "uppercase" }}>We Buy All Used & Broken Pens</span>
+              </div>
+
+              <h1 className="display" style={{ fontSize: "clamp(48px, 7vw, 88px)", lineHeight: 1.0, fontWeight: 700, marginBottom: 24, letterSpacing: "-0.02em" }}>
+                Your Old Pens<br />
+                <em style={{ color: "#C8956C" }}>Are Worth</em><br />
+                More Than Zero.
+              </h1>
+
+              <p className="body" style={{ fontSize: 15, lineHeight: 1.85, color: "#6B6560", maxWidth: 460, marginBottom: 40 }}>
+                Don't throw away your used, dried-out, or broken pens. We purchase them — any brand, any condition, any quantity. Turn your pen drawer clutter into real cash.
+              </p>
+
+              <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 52 }}>
+                <button className="btn-main" onClick={() => scroll("contact")}>Get a Free Quote →</button>
+                <button className="btn-outline" onClick={() => scroll("how")}>See How It Works</button>
+              </div>
+
+              <div className="stats-row" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 24, paddingTop: 36, borderTop: "1px solid rgba(28,26,23,0.1)" }}>
+                {STATS.map((s, i) => (
+                  <div key={i} style={{ animation: `fadeUp 0.6s ease ${0.3 + i * 0.08}s both` }}>
+                    <div className="display" style={{ fontSize: 26, fontWeight: 700, color: "#C8956C", lineHeight: 1 }}>{s.value}</div>
+                    <div className="body" style={{ fontSize: 11, color: "#9A9390", marginTop: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Hero visual */}
+            <div className="desktop-only" style={{ animation: "fadeUp 0.7s ease 0.2s both" }}>
+              <div style={{ position: "relative" }}>
+                {/* Big pen illustration card */}
+                <div style={{ background: "#fff", borderRadius: 20, padding: 40, boxShadow: "0 32px 80px rgba(28,26,23,0.1)", border: "1px solid rgba(28,26,23,0.06)", position: "relative", overflow: "hidden" }}>
+                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg, #C8956C, #E8A838, #C8956C)" }} />
+                  <div style={{ textAlign: "center", marginBottom: 28 }}>
+                    <div style={{ fontSize: 72, animation: "penFloat 3.5s ease-in-out infinite" }}>🖊️</div>
+                    <div className="display" style={{ fontSize: 22, fontWeight: 600, marginTop: 12 }}>Ready to sell your pens?</div>
+                    <div className="body" style={{ fontSize: 13, color: "#9A9390", marginTop: 6 }}>Get paid for what others throw away</div>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+                    {["✅ Free prepaid shipping label", "✅ Payment within 48 hours", "✅ No minimum quantity required", "✅ All brands & conditions accepted"].map((f, i) => (
+                      <div key={i} className="body" style={{ fontSize: 13, color: "#4A4540", display: "flex", alignItems: "center", gap: 8 }}>{f}</div>
+                    ))}
+                  </div>
+
+                  <button className="btn-amber" style={{ width: "100%" }} onClick={() => scroll("contact")}>Start Selling Now</button>
+
+                  <div style={{ textAlign: "center", marginTop: 16 }}>
+                    <span className="body" style={{ fontSize: 12, color: "#B0AAA5" }}>🔒 Secure · Trusted by 18,000+ sellers</span>
+                  </div>
+                </div>
+
+                {/* Floating tag */}
+                <div style={{ position: "absolute", bottom: -18, left: -20, background: "#C8956C", color: "#fff", borderRadius: 10, padding: "10px 18px", boxShadow: "0 8px 24px rgba(200,149,108,0.4)" }}>
+                  <div className="body" style={{ fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.85 }}>Latest payout</div>
+                  <div className="display" style={{ fontSize: 18, fontWeight: 700 }}>₹1,240 for 68 pens</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── MARQUEE ── */}
+      <div style={{ background: "#1C1A17", padding: "13px 0", overflow: "hidden" }}>
+        <div className="marquee-track body" style={{ fontSize: 12, color: "rgba(253,250,246,0.6)", letterSpacing: "0.12em", textTransform: "uppercase" }}>
+          {Array(8).fill("  ◆  Ballpoint Pens  ◆  Gel Pens  ◆  Fountain Pens  ◆  Markers  ◆  Broken Pens  ◆  Bulk Orders Welcome  ◆  Free Shipping  ◆  Fast Payment").join("")}
+        </div>
+      </div>
+
+      {/* ── HOW IT WORKS ── */}
+      <section id="how" style={{ padding: "110px 48px", background: "#FDFAF6" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 70 }}>
+            <span className="body" style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C8956C", display: "block", marginBottom: 12 }}>Simple Process</span>
+            <h2 className="display" style={{ fontSize: "clamp(36px, 5vw, 54px)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              Selling your pens is<br /><em>refreshingly easy</em>
+            </h2>
+          </Reveal>
+
+          <div className="how-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 28 }}>
+            {HOW_IT_WORKS.map((s, i) => (
+              <Reveal key={i} delay={i * 0.1}>
+                <div className="card-hover" style={{ background: "#fff", borderRadius: 14, padding: 28, border: "1px solid rgba(28,26,23,0.07)", position: "relative", height: "100%" }}>
+                  <div className="body" style={{ fontSize: 11, letterSpacing: "0.1em", color: "#C8956C", marginBottom: 14, fontWeight: 600 }}>{s.step}</div>
+                  <div style={{ fontSize: 34, marginBottom: 14 }}>{s.icon}</div>
+                  <h3 className="display" style={{ fontSize: 20, fontWeight: 600, marginBottom: 10, lineHeight: 1.2 }}>{s.title}</h3>
+                  <p className="body" style={{ fontSize: 13, lineHeight: 1.8, color: "#7A746E" }}>{s.desc}</p>
+                  {i < 3 && (
+                    <div className="desktop-only" style={{ position: "absolute", top: "50%", right: -20, transform: "translateY(-50%)", fontSize: 18, color: "#D4B8A0", zIndex: 1 }}>→</div>
+                  )}
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── PEN TYPES ── */}
+      <section id="types" style={{ padding: "110px 48px", background: "linear-gradient(160deg, #F5EDE0, #FDFAF6)" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 70 }}>
+            <span className="body" style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C8956C", display: "block", marginBottom: 12 }}>What We Buy</span>
+            <h2 className="display" style={{ fontSize: "clamp(36px, 5vw, 54px)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              We buy <em>every type</em><br />of pen imaginable
+            </h2>
+            <p className="body" style={{ fontSize: 15, color: "#7A746E", maxWidth: 480, margin: "18px auto 0", lineHeight: 1.8 }}>
+              Condition doesn't matter. Brand doesn't matter. We'll take them all.
+            </p>
+          </Reveal>
+
+          <div className="types-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 }}>
+            {PEN_TYPES.map((t, i) => (
+              <Reveal key={i} delay={i * 0.08}>
+                <div className="card-hover" style={{ background: "#fff", borderRadius: 14, padding: 28, border: "1px solid rgba(28,26,23,0.06)", display: "flex", gap: 18, alignItems: "flex-start" }}>
+                  <div style={{ fontSize: 36, flexShrink: 0 }}>{t.icon}</div>
+                  <div>
+                    <div style={{ display: "inline-block", width: 28, height: 3, background: t.color, borderRadius: 2, marginBottom: 8 }} />
+                    <h3 className="display" style={{ fontSize: 19, fontWeight: 600, marginBottom: 6, lineHeight: 1.2 }}>{t.label}</h3>
+                    <p className="body" style={{ fontSize: 12, color: "#9A9390", lineHeight: 1.7 }}>{t.desc}</p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal style={{ textAlign: "center", marginTop: 50 }}>
+            <p className="body" style={{ fontSize: 14, color: "#9A9390", marginBottom: 20 }}>Don't see your pen type listed? We probably still want it.</p>
+            <button className="btn-main" onClick={() => scroll("contact")}>Ask Us About Your Pens</button>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section id="testimonials" style={{ padding: "110px 48px", background: "#1C1A17" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 70 }}>
+            <span className="body" style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C8956C", display: "block", marginBottom: 12 }}>Testimonials</span>
+            <h2 className="display" style={{ fontSize: "clamp(36px, 5vw, 54px)", fontWeight: 700, lineHeight: 1.1, color: "#FDFAF6", letterSpacing: "-0.02em" }}>
+              Real sellers,<br /><em style={{ color: "#C8956C" }}>real payouts</em>
+            </h2>
+          </Reveal>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+            {TESTIMONIALS.map((t, i) => (
+              <Reveal key={i} delay={i * 0.12}>
+                <div style={{ background: "#262320", border: "1px solid rgba(253,250,246,0.07)", borderRadius: 14, padding: 32, height: "100%", display: "flex", flexDirection: "column" }}>
+                  <div style={{ marginBottom: 16 }}><StarRating count={t.stars} /></div>
+                  <p className="display" style={{ fontSize: 17, fontStyle: "italic", lineHeight: 1.75, color: "rgba(253,250,246,0.85)", flex: 1, marginBottom: 24 }}>"{t.text}"</p>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(253,250,246,0.07)", paddingTop: 20 }}>
+                    <div>
+                      <div className="body" style={{ fontSize: 14, fontWeight: 600, color: "#FDFAF6" }}>{t.name}</div>
+                      <div className="body" style={{ fontSize: 12, color: "#7A746E" }}>{t.location}</div>
+                    </div>
+                    <div style={{ background: "rgba(200,149,108,0.15)", border: "1px solid rgba(200,149,108,0.25)", borderRadius: 100, padding: "4px 12px" }}>
+                      <span className="body" style={{ fontSize: 11, color: "#C8956C", letterSpacing: "0.06em" }}>{t.pens}</span>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHY CHOOSE US ── */}
+      <section style={{ padding: "110px 48px", background: "#FDFAF6" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <div className="about-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "center" }}>
+            <Reveal>
+              <div>
+                <span className="body" style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C8956C", display: "block", marginBottom: 16 }}>Why PenBack?</span>
+                <h2 className="display" style={{ fontSize: "clamp(32px, 4vw, 48px)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: 24 }}>
+                  We make recycling<br /><em>profitable for you</em>
+                </h2>
+                <p className="body" style={{ fontSize: 14, lineHeight: 1.9, color: "#7A746E", marginBottom: 32 }}>
+                  Every year, billions of pens end up in landfills. PenBack was founded to change that — by giving pen owners a financial incentive to recycle responsibly. We extract value from used pens through material recovery and refurbishment, then pass those savings back to you.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {[
+                    ["🌱", "Eco-Responsible", "Every pen we buy is recycled, refurbished, or repurposed. Zero landfill policy."],
+                    ["⚡", "Fast & Reliable", "Quotes in 24hrs, shipping labels instantly, payment in 48hrs of receipt."],
+                    ["🔐", "Safe & Secure", "Trusted by 18,000+ sellers. Secure payments, no personal data sold."],
+                  ].map(([icon, title, desc]) => (
+                    <div key={title} style={{ display: "flex", gap: 16, padding: "18px 20px", background: "#fff", borderRadius: 10, border: "1px solid rgba(28,26,23,0.07)" }}>
+                      <span style={{ fontSize: 24, flexShrink: 0 }}>{icon}</span>
+                      <div>
+                        <div className="body" style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>{title}</div>
+                        <div className="body" style={{ fontSize: 13, color: "#8A8480", lineHeight: 1.7 }}>{desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+            <Reveal delay={0.15}>
+              <div style={{ background: "linear-gradient(135deg, #F5EDE0, #EDD8C0)", borderRadius: 20, padding: 48, position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: -30, right: -30, width: 160, height: 160, borderRadius: "50%", background: "rgba(200,149,108,0.15)" }} />
+                <div style={{ fontSize: 56, marginBottom: 20 }}>♻️</div>
+                <h3 className="display" style={{ fontSize: 28, fontWeight: 700, marginBottom: 14, lineHeight: 1.2 }}>Every pen has a second life</h3>
+                <p className="body" style={{ fontSize: 13, color: "#6B6560", lineHeight: 1.8, marginBottom: 28 }}>Our refurbishment partners breathe new life into salvageable pens. Metal components get melted and reused. Plastic gets granulated into new products.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  {[["2.4M", "Pens Recycled"], ["12T", "Plastic Diverted"], ["3K+", "Pens Refurbished"], ["0", "To Landfill"]].map(([v, l]) => (
+                    <div key={l} style={{ background: "rgba(255,255,255,0.5)", borderRadius: 10, padding: "14px 16px" }}>
+                      <div className="display" style={{ fontSize: 24, fontWeight: 700, color: "#C8956C" }}>{v}</div>
+                      <div className="body" style={{ fontSize: 11, color: "#8A8480", textTransform: "uppercase", letterSpacing: "0.06em" }}>{l}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section id="faq" style={{ padding: "110px 48px", background: "#F5EDE0" }}>
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 60 }}>
+            <span className="body" style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C8956C", display: "block", marginBottom: 12 }}>FAQ</span>
+            <h2 className="display" style={{ fontSize: "clamp(32px, 4vw, 48px)", fontWeight: 700, lineHeight: 1.1, letterSpacing: "-0.02em" }}>
+              Common questions<br /><em>answered</em>
+            </h2>
+          </Reveal>
+          {FAQS.map((f, i) => (
+            <Reveal key={i} delay={i * 0.06}>
+              <div className="faq-item" style={{ padding: "22px 0" }}>
+                <button onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ width: "100%", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+                  <span className="display" style={{ fontSize: 18, fontWeight: 600, textAlign: "left", lineHeight: 1.3 }}>{f.q}</span>
+                  <span style={{ fontSize: 20, color: "#C8956C", flexShrink: 0, transition: "transform 0.25s", transform: openFaq === i ? "rotate(45deg)" : "none" }}>+</span>
+                </button>
+                {openFaq === i && (
+                  <p className="body" style={{ fontSize: 14, lineHeight: 1.85, color: "#6B6560", marginTop: 14, paddingRight: 32 }}>{f.a}</p>
+                )}
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CONTACT / QUOTE FORM ── */}
+      <section id="contact" style={{ padding: "110px 48px", background: "#1C1A17" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <Reveal style={{ textAlign: "center", marginBottom: 56 }}>
+            <span className="body" style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C8956C", display: "block", marginBottom: 12 }}>Get a Quote</span>
+            <h2 className="display" style={{ fontSize: "clamp(36px, 5vw, 54px)", fontWeight: 700, lineHeight: 1.1, color: "#FDFAF6", letterSpacing: "-0.02em" }}>
+              Tell us about<br /><em style={{ color: "#C8956C" }}>your pens</em>
+            </h2>
+            <p className="body" style={{ fontSize: 14, color: "rgba(253,250,246,0.5)", marginTop: 14, lineHeight: 1.8 }}>Fill in the form below and we'll send you a fair cash offer within 24 hours.</p>
+          </Reveal>
+
+          {submitted ? (
+            <Reveal>
+              <div style={{ background: "#262320", border: "1px solid rgba(200,149,108,0.3)", borderRadius: 16, padding: 56, textAlign: "center" }}>
+                <div style={{ fontSize: 56, marginBottom: 20 }}>🎉</div>
+                <h3 className="display" style={{ fontSize: 28, fontWeight: 700, color: "#FDFAF6", marginBottom: 12 }}>Quote Request Received!</h3>
+                <p className="body" style={{ fontSize: 14, color: "rgba(253,250,246,0.55)", lineHeight: 1.8 }}>
+                  We'll review your submission and send a personalised cash offer to <strong style={{ color: "#C8956C" }}>{formData.email}</strong> within 24 hours.
+                </p>
+              </div>
+            </Reveal>
+          ) : (
+            <Reveal>
+              <div style={{ background: "#262320", border: "1px solid rgba(253,250,246,0.08)", borderRadius: 16, padding: "44px 40px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <label className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.5)", display: "block", marginBottom: 6, letterSpacing: "0.06em" }}>FULL NAME *</label>
+                    <input placeholder="Your name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.5)", display: "block", marginBottom: 6, letterSpacing: "0.06em" }}>EMAIL *</label>
+                    <input type="email" placeholder="you@email.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <label className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.5)", display: "block", marginBottom: 6, letterSpacing: "0.06em" }}>APPROX. QUANTITY</label>
+                    <input placeholder="e.g. 20, 100, 500+" value={formData.quantity} onChange={e => setFormData({ ...formData, quantity: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.5)", display: "block", marginBottom: 6, letterSpacing: "0.06em" }}>PEN BRAND(S)</label>
+                    <input placeholder="e.g. Parker, Cello, any" value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 28 }}>
+                  <label className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.5)", display: "block", marginBottom: 6, letterSpacing: "0.06em" }}>ADDITIONAL DETAILS</label>
+                  <textarea rows={4} placeholder="Tell us more about the condition, type of pens, or anything else relevant..." value={formData.message} onChange={e => setFormData({ ...formData, message: e.target.value })} style={{ resize: "vertical" }} />
+                </div>
+                <button className="btn-amber" style={{ width: "100%", fontSize: 14 }} onClick={handleSubmit}>
+                  Submit for a Free Quote →
+                </button>
+                <p className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.3)", textAlign: "center", marginTop: 16 }}>
+                  No commitment required. We'll reach out with your offer — you decide.
+                </p>
+              </div>
+            </Reveal>
+          )}
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{ borderTop: "1px solid rgba(253,250,246,0.08)", background: "#1C1A17", padding: "60px 48px 36px" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+          <div className="footer-grid" style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 56, marginBottom: 56 }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <span style={{ fontSize: 20 }}>🖊️</span>
+                <span className="display" style={{ fontSize: 20, fontWeight: 700, color: "#FDFAF6" }}>PenBack</span>
+              </div>
+              <p className="body" style={{ fontSize: 13, lineHeight: 1.9, color: "rgba(253,250,246,0.4)", maxWidth: 240 }}>
+                Turning unusable pens into cash for you and sustainable materials for the planet. Zero landfill. Real payouts.
+              </p>
+            </div>
+            {[
+              { title: "Company", links: ["About Us", "How It Works", "Eco Promise", "Blog"] },
+              { title: "Sell", links: ["Get a Quote", "Bulk Orders", "Luxury Pens", "Shipping Info"] },
+              { title: "Support", links: ["FAQ", "Contact Us", "Privacy Policy", "Terms"] },
+            ].map(col => (
+              <div key={col.title}>
+                <div className="body" style={{ fontSize: 11, letterSpacing: "0.12em", color: "#C8956C", marginBottom: 20, textTransform: "uppercase" }}>{col.title}</div>
+                {col.links.map(l => (
+                  <div key={l} className="body" style={{ fontSize: 13, color: "rgba(253,250,246,0.4)", marginBottom: 12, cursor: "pointer", transition: "color 0.2s" }}
+                    onMouseEnter={e => e.target.style.color = "#FDFAF6"}
+                    onMouseLeave={e => e.target.style.color = "rgba(253,250,246,0.4)"}>{l}</div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div style={{ borderTop: "1px solid rgba(253,250,246,0.07)", paddingTop: 28, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <span className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.25)", letterSpacing: "0.05em" }}>© 2026 PenBack. All rights reserved.</span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 14 }}>🌱</span>
+              <span className="body" style={{ fontSize: 12, color: "rgba(253,250,246,0.3)" }}>Committed to zero landfill pen recycling</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
